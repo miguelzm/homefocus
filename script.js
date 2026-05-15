@@ -36,17 +36,26 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// Anonymous auth for security
+// Anonymous auth with safe fallback
 let authReady = false;
-firebase.auth().signInAnonymously().catch(err => {
-    console.error('Auth error:', err);
-    authReady = true; // Proceed anyway as fallback
-});
-firebase.auth().onAuthStateChanged((user) => {
-    if (user) {
+try {
+    if (firebase.auth) {
+        firebase.auth().signInAnonymously().catch(err => {
+            console.warn('Firebase auth fallback:', err);
+            authReady = true;
+        });
+        firebase.auth().onAuthStateChanged((user) => {
+            authReady = true;
+        });
+        // Safety timeout - unblock after 5s even if auth hangs
+        setTimeout(() => { authReady = true; }, 5000);
+    } else {
         authReady = true;
     }
-});
+} catch(e) {
+    console.warn('Firebase auth init error:', e);
+    authReady = true;
+}
 
 const TASKS_DOC = db.collection('homefocus').doc('tasks');
 
@@ -1003,50 +1012,55 @@ function switchLoFi(stationId) {
 }
 
 // Init LoFi
-const lofiToggle = document.getElementById('lofiToggle');
-if (lofiToggle) {
-    lofiToggle.addEventListener('click', () => {
-        lofiCollapsed = !lofiCollapsed;
-        renderLoFiStations();
-    });
+try {
+    const lofiToggle = document.getElementById('lofiToggle');
+    if (lofiToggle) {
+        lofiToggle.addEventListener('click', () => {
+            lofiCollapsed = !lofiCollapsed;
+            renderLoFiStations();
+        });
+    }
+    renderLoFiStations();
+    if (document.getElementById('lofiIframe')) {
+        switchLoFi('lofi1');
+    }
+} catch(e) {
+    console.warn('LoFi init error:', e);
 }
-renderLoFiStations();
-switchLoFi('lofi1');
 
 // Tasks functionality
 function initTasks() {
-    // Listen for real-time changes from Firestore
+    // Load from localStorage immediately so UI works even if Firestore is slow
+    const saved = localStorage.getItem('homefocus_tasks_backup');
+    if (saved) {
+        try { globalTasks = JSON.parse(saved); } catch(e) { globalTasks = []; }
+    }
+    checkNewDay();
+    renderTaskTable();
+    renderGlobalTaskTable();
+    populateTaskSelector();
+
+    // Then sync with Firestore in background
     TASKS_DOC.onSnapshot((snapshot) => {
         if (snapshot.exists) {
             globalTasks = snapshot.data().tasks || [];
-        } else {
-            globalTasks = [];
+            checkNewDay();
+            saveGlobalTasks();
+            renderTaskTable();
+            renderGlobalTaskTable();
+            populateTaskSelector();
         }
-        checkNewDay();
-        saveGlobalTasks();
-        renderTaskTable();
-        renderGlobalTaskTable();
-        populateTaskSelector();
     }, (error) => {
-        console.error('Firestore error:', error);
-        // Fallback: load from localStorage
-        const saved = localStorage.getItem('homefocus_tasks_backup');
-        if (saved) {
-            try { globalTasks = JSON.parse(saved); } catch(e) { globalTasks = []; }
-        }
-        checkNewDay();
-        renderTaskTable();
-        renderGlobalTaskTable();
-        populateTaskSelector();
+        console.warn('Firestore sync error (using localStorage):', error);
     });
 }
 
 function saveGlobalTasks() {
-    // Save to Firestore
-    TASKS_DOC.set({ tasks: globalTasks, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
-        .catch(err => console.error('Firestore save error:', err));
-    // Backup to localStorage
     localStorage.setItem('homefocus_tasks_backup', JSON.stringify(globalTasks));
+    try {
+        TASKS_DOC.set({ tasks: globalTasks, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+            .catch(err => {});
+    } catch(e) {}
 }
 
 function checkNewDay() {
