@@ -24,6 +24,19 @@ const tracks = {
     focus: { url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3', name: 'Música para Concentrarse' }
 };
 
+// Firebase
+const firebaseConfig = {
+  apiKey: "AIzaSyDimp0FC92olHJb9hOQQGcBQuHVXIIgvAA",
+  authDomain: "homefocus-9ee19.firebaseapp.com",
+  projectId: "homefocus-9ee19",
+  storageBucket: "homefocus-9ee19.firebasestorage.app",
+  messagingSenderId: "462612128471",
+  appId: "1:462612128471:web:f9169137f800b171d58692"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const TASKS_DOC = db.collection('homefocus').doc('tasks');
+
 const STORAGE_KEYS = {
     USER_NAME: 'homefocus_username',
     STATS: 'homefocus_stats',
@@ -31,11 +44,10 @@ const STORAGE_KEYS = {
     CUSTOM_FILES: 'homefocus_custom_files',
     URL_FILES: 'homefocus_url_files',
     LAST_TRACK: 'homefocus_last_track',
-    AUTO_MUSIC: 'homefocus_auto_music',
-    GLOBAL_TASKS: 'homefocus_global_tasks'
+    AUTO_MUSIC: 'homefocus_auto_music'
 };
 
-let globalTasks = []; // { id, name, priority, deadline, isDaily, dailyCompleted, completed, completionDate, pomodoros }
+let globalTasks = [];
 let selectedTaskId = null;
 
 let timerInterval = null;
@@ -990,11 +1002,38 @@ switchLoFi('lofi1');
 
 // Tasks functionality
 function initTasks() {
-    loadGlobalTasks();
-    checkNewDay();
-    renderTaskTable();
-    renderGlobalTaskTable();
-    populateTaskSelector();
+    // Listen for real-time changes from Firestore
+    TASKS_DOC.onSnapshot((snapshot) => {
+        if (snapshot.exists) {
+            globalTasks = snapshot.data().tasks || [];
+        } else {
+            globalTasks = [];
+        }
+        checkNewDay();
+        saveGlobalTasks();
+        renderTaskTable();
+        renderGlobalTaskTable();
+        populateTaskSelector();
+    }, (error) => {
+        console.error('Firestore error:', error);
+        // Fallback: load from localStorage
+        const saved = localStorage.getItem('homefocus_tasks_backup');
+        if (saved) {
+            try { globalTasks = JSON.parse(saved); } catch(e) { globalTasks = []; }
+        }
+        checkNewDay();
+        renderTaskTable();
+        renderGlobalTaskTable();
+        populateTaskSelector();
+    });
+}
+
+function saveGlobalTasks() {
+    // Save to Firestore
+    TASKS_DOC.set({ tasks: globalTasks, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+        .catch(err => console.error('Firestore save error:', err));
+    // Backup to localStorage
+    localStorage.setItem('homefocus_tasks_backup', JSON.stringify(globalTasks));
 }
 
 function checkNewDay() {
@@ -1010,21 +1049,6 @@ function checkNewDay() {
         saveGlobalTasks();
     }
     localStorage.setItem('homefocus_last_daily_date', today);
-}
-
-function loadGlobalTasks() {
-    const saved = localStorage.getItem(STORAGE_KEYS.GLOBAL_TASKS);
-    if (saved) {
-        try {
-            globalTasks = JSON.parse(saved);
-        } catch (e) {
-            globalTasks = [];
-        }
-    }
-}
-
-function saveGlobalTasks() {
-    localStorage.setItem(STORAGE_KEYS.GLOBAL_TASKS, JSON.stringify(globalTasks));
 }
 
 function addGlobalTask() {
