@@ -33,31 +33,30 @@ const firebaseConfig = {
   messagingSenderId: "462612128471",
   appId: "1:462612128471:web:f9169137f800b171d58692"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+// Firebase (with full fallback if CDN fails)
+let db = null;
+let TASKS_DOC = null;
+let authReady = true;
 
-// Anonymous auth with safe fallback
-let authReady = false;
 try {
-    if (firebase.auth) {
-        firebase.auth().signInAnonymously().catch(err => {
-            console.warn('Firebase auth fallback:', err);
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        authReady = false;
+        // Anonymous auth
+        if (firebase.auth) {
+            firebase.auth().signInAnonymously().catch(() => { authReady = true; });
+            firebase.auth().onAuthStateChanged(() => { authReady = true; });
+            setTimeout(() => { authReady = true; }, 5000);
+        } else {
             authReady = true;
-        });
-        firebase.auth().onAuthStateChanged((user) => {
-            authReady = true;
-        });
-        // Safety timeout - unblock after 5s even if auth hangs
-        setTimeout(() => { authReady = true; }, 5000);
-    } else {
-        authReady = true;
+        }
+        TASKS_DOC = db.collection('homefocus').doc('tasks');
     }
 } catch(e) {
-    console.warn('Firebase auth init error:', e);
+    console.warn('Firebase no disponible, usando solo localStorage:', e);
     authReady = true;
 }
-
-const TASKS_DOC = db.collection('homefocus').doc('tasks');
 
 const STORAGE_KEYS = {
     USER_NAME: 'homefocus_username',
@@ -1030,11 +1029,39 @@ try {
 
 // Tasks functionality
 function initTasks() {
-    // Load from localStorage immediately so UI works even if Firestore is slow
     const saved = localStorage.getItem('homefocus_tasks_backup');
     if (saved) {
         try { globalTasks = JSON.parse(saved); } catch(e) { globalTasks = []; }
     }
+    checkNewDay();
+    renderTaskTable();
+    renderGlobalTaskTable();
+    populateTaskSelector();
+
+    // Sync with Firestore if available
+    if (TASKS_DOC) {
+        TASKS_DOC.onSnapshot((snapshot) => {
+            if (snapshot.exists) {
+                globalTasks = snapshot.data().tasks || [];
+                checkNewDay();
+                saveGlobalTasks();
+                renderTaskTable();
+                renderGlobalTaskTable();
+                populateTaskSelector();
+            }
+        }, () => {});
+    }
+}
+
+function saveGlobalTasks() {
+    localStorage.setItem('homefocus_tasks_backup', JSON.stringify(globalTasks));
+    if (TASKS_DOC) {
+        try {
+            TASKS_DOC.set({ tasks: globalTasks, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+                .catch(() => {});
+        } catch(e) {}
+    }
+}
     checkNewDay();
     renderTaskTable();
     renderGlobalTaskTable();
