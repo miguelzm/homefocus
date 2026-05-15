@@ -1061,33 +1061,6 @@ function saveGlobalTasks() {
         } catch(e) {}
     }
 }
-    checkNewDay();
-    renderTaskTable();
-    renderGlobalTaskTable();
-    populateTaskSelector();
-
-    // Then sync with Firestore in background
-    TASKS_DOC.onSnapshot((snapshot) => {
-        if (snapshot.exists) {
-            globalTasks = snapshot.data().tasks || [];
-            checkNewDay();
-            saveGlobalTasks();
-            renderTaskTable();
-            renderGlobalTaskTable();
-            populateTaskSelector();
-        }
-    }, (error) => {
-        console.warn('Firestore sync error (using localStorage):', error);
-    });
-}
-
-function saveGlobalTasks() {
-    localStorage.setItem('homefocus_tasks_backup', JSON.stringify(globalTasks));
-    try {
-        TASKS_DOC.set({ tasks: globalTasks, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
-            .catch(err => {});
-    } catch(e) {}
-}
 
 function checkNewDay() {
     const today = new Date().toISOString().split('T')[0];
