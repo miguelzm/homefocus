@@ -34,16 +34,15 @@ const firebaseConfig = {
   appId: "1:462612128471:web:f9169137f800b171d58692"
 };
 // Firebase (with full fallback if CDN fails)
-let db = null;
+let firestoreDb = null;
 let TASKS_DOC = null;
 let authReady = true;
 
 try {
     if (typeof firebase !== 'undefined') {
         firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
+        firestoreDb = firebase.firestore();
         authReady = false;
-        // Anonymous auth
         if (firebase.auth) {
             firebase.auth().signInAnonymously().catch(() => { authReady = true; });
             firebase.auth().onAuthStateChanged(() => { authReady = true; });
@@ -51,7 +50,7 @@ try {
         } else {
             authReady = true;
         }
-        TASKS_DOC = db.collection('homefocus').doc('tasks');
+        TASKS_DOC = firestoreDb.collection('homefocus').doc('tasks');
     }
 } catch(e) {
     console.warn('Firebase no disponible, usando solo localStorage:', e);
