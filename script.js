@@ -35,6 +35,19 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+
+// Anonymous auth for security
+let authReady = false;
+firebase.auth().signInAnonymously().catch(err => {
+    console.error('Auth error:', err);
+    authReady = true; // Proceed anyway as fallback
+});
+firebase.auth().onAuthStateChanged((user) => {
+    if (user) {
+        authReady = true;
+    }
+});
+
 const TASKS_DOC = db.collection('homefocus').doc('tasks');
 
 const STORAGE_KEYS = {
