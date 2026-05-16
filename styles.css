@@ -1694,3 +1694,121 @@ body.focus-mode .sidebar-content {
         --text-primary: #ffffff;
     }
 }
+
+/* Login overlay */
+.login-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(12px);
+}
+
+.login-overlay.hidden {
+    display: none;
+}
+
+.login-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 2.5rem 2rem;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    animation: modalIn 0.3s ease;
+}
+
+.login-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+}
+
+.login-subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+    font-size: 0.95rem;
+}
+
+.login-field {
+    margin-bottom: 0.85rem;
+}
+
+.login-field.hidden {
+    display: none;
+}
+
+.login-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: var(--transition);
+    box-sizing: border-box;
+}
+
+.login-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.login-input::placeholder {
+    color: var(--text-muted);
+}
+
+.login-btn {
+    margin-top: 0.5rem;
+    width: 100%;
+}
+
+.login-error {
+    color: #fca5a5;
+    font-size: 0.85rem;
+    margin: 0 0 1rem 0;
+    padding: 0.6rem 0.8rem;
+    background: rgba(239, 68, 68, 0.15);
+    border-radius: 8px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.login-error.hidden {
+    display: none;
+}
+
+.login-switch {
+    margin-top: 1.2rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.login-switch a {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.login-switch a:hover {
+    text-decoration: underline;
+}
+
+body:not(.logged-in) .container,
+body:not(.logged-in) .sidebar,
+body:not(.logged-in) .sidebar-toggle,
+body:not(.logged-in) .sidebar-toggle-left,
+body:not(.logged-in) .sidebar-toggle-right,
+body:not(.logged-in) .right-panel {
+    display: none;
+}

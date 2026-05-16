@@ -37,6 +37,8 @@ const firebaseConfig = {
 let firestoreDb = null;
 let TASKS_DOC = null;
 let authReady = true;
+let currentUser = null;
+let isLoginMode = true;
 
 try {
     if (typeof firebase !== 'undefined') {
@@ -44,17 +46,35 @@ try {
         firestoreDb = firebase.firestore();
         authReady = false;
         if (firebase.auth) {
-            firebase.auth().signInAnonymously().catch(() => { authReady = true; });
-            firebase.auth().onAuthStateChanged(() => { authReady = true; });
-            setTimeout(() => { authReady = true; }, 5000);
+            firebase.auth().onAuthStateChanged((user) => {
+                authReady = true;
+                currentUser = user;
+                if (user) {
+                    setLoggedIn();
+                    afterAuthInit();
+                } else {
+                    showLogin();
+                }
+            });
+            setTimeout(() => {
+                if (!authReady) {
+                    authReady = true;
+                    showLogin();
+                }
+            }, 10000);
         } else {
             authReady = true;
+            showLogin();
         }
         TASKS_DOC = firestoreDb.collection('homefocus').doc('tasks');
+    } else {
+        authReady = true;
+        showLogin();
     }
 } catch(e) {
-    console.warn('Firebase no disponible, usando solo localStorage:', e);
+    console.warn('Firebase error:', e);
     authReady = true;
+    showLogin();
 }
 
 const STORAGE_KEYS = {
@@ -87,6 +107,7 @@ let directoryHandle = null;
 const elements = {
     greeting: document.getElementById('greeting'),
     editNameBtn: document.getElementById('editNameBtn'),
+    logoutBtn: document.getElementById('logoutBtn'),
     nameModal: document.getElementById('nameModal'),
     nameInput: document.getElementById('nameInput'),
     saveNameBtn: document.getElementById('saveNameBtn'),
@@ -196,6 +217,22 @@ function setupEventListeners() {
         elements.notification.classList.add('hidden');
     });
     
+    // Logout
+    elements.logoutBtn.addEventListener('click', handleLogout);
+
+    // Login form
+    document.getElementById('loginSubmitBtn').addEventListener('click', handleLoginSubmit);
+    document.getElementById('loginSwitchLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleLoginMode();
+    });
+    document.getElementById('loginPasswordInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleLoginSubmit();
+    });
+    document.getElementById('loginEmailInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleLoginSubmit();
+    });
+
     // Tasks event listeners
     elements.toggleSidebar.addEventListener('click', toggleSidebar);
     elements.toggleTasks.addEventListener('click', toggleTasks);
@@ -340,13 +377,115 @@ function saveUserName() {
     const name = elements.nameInput.value.trim();
     if (name) {
         localStorage.setItem(STORAGE_KEYS.USER_NAME, name);
+        if (currentUser) {
+            currentUser.updateProfile({ displayName: name }).catch(() => {});
+        }
         elements.nameModal.classList.add('hidden');
         updateGreeting();
     }
 }
 
+// Login functions
+function showLogin() {
+    document.getElementById('loginOverlay').classList.remove('hidden');
+}
+
+function setLoggedIn() {
+    document.getElementById('loginOverlay').classList.add('hidden');
+    document.body.classList.add('logged-in');
+}
+
+function toggleLoginMode() {
+    isLoginMode = !isLoginMode;
+    const nameField = document.getElementById('nameFieldContainer');
+    const btn = document.getElementById('loginSubmitBtn');
+    const subtitle = document.getElementById('loginSubtitle');
+    const link = document.getElementById('loginSwitchLink');
+    if (isLoginMode) {
+        nameField.classList.add('hidden');
+        btn.textContent = 'Iniciar Sesión';
+        subtitle.textContent = 'Inicia sesión para continuar';
+        link.textContent = 'Crear cuenta nueva';
+    } else {
+        nameField.classList.remove('hidden');
+        btn.textContent = 'Crear Cuenta';
+        subtitle.textContent = 'Crea tu cuenta para empezar';
+        link.textContent = 'Ya tengo cuenta';
+    }
+    hideLoginError();
+}
+
+function showLoginError(msg) {
+    const el = document.getElementById('loginError');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+}
+
+function hideLoginError() {
+    document.getElementById('loginError').classList.add('hidden');
+}
+
+function getFirebaseErrorMessage(code) {
+    const messages = {
+        'auth/email-already-in-use': 'Este correo ya está registrado',
+        'auth/invalid-email': 'Correo electrónico inválido',
+        'auth/user-not-found': 'Usuario no encontrado',
+        'auth/wrong-password': 'Contraseña incorrecta',
+        'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres',
+        'auth/too-many-requests': 'Demasiados intentos. Intenta más tarde.',
+        'auth/invalid-credential': 'Correo o contraseña incorrectos'
+    };
+    return messages[code] || 'Error de autenticación. Intenta de nuevo.';
+}
+
+async function handleLoginSubmit() {
+    const email = document.getElementById('loginEmailInput').value.trim();
+    const password = document.getElementById('loginPasswordInput').value;
+    hideLoginError();
+    if (!email || !password) {
+        showLoginError('Completa todos los campos');
+        return;
+    }
+    try {
+        if (isLoginMode) {
+            await firebase.auth().signInWithEmailAndPassword(email, password);
+        } else {
+            const name = document.getElementById('loginNameInput').value.trim();
+            if (!name) {
+                showLoginError('Ingresa tu nombre');
+                return;
+            }
+            const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+            await cred.user.updateProfile({ displayName: name });
+            localStorage.setItem(STORAGE_KEYS.USER_NAME, name);
+        }
+    } catch (err) {
+        showLoginError(getFirebaseErrorMessage(err.code));
+    }
+}
+
+async function handleLogout() {
+    try {
+        await firebase.auth().signOut();
+        globalTasks = [];
+        document.body.classList.remove('logged-in');
+    } catch(e) {
+        console.warn('Logout error:', e);
+    }
+}
+
+function afterAuthInit() {
+    checkUserName();
+    updateGreeting();
+    initTasks();
+}
+
 function updateGreeting() {
-    const name = localStorage.getItem(STORAGE_KEYS.USER_NAME) || 'Usuario';
+    let name = localStorage.getItem(STORAGE_KEYS.USER_NAME);
+    if (!name && currentUser) {
+        name = currentUser.displayName || currentUser.email?.split('@')[0] || '';
+    }
+    name = name || 'Usuario';
     const hour = new Date().getHours();
     let greeting;
 
@@ -959,6 +1098,8 @@ const lofiStations = [
     { id: 'lofi2', name: '🎹 Synthwave', url: 'https://www.youtube.com/embed/a8n4kHxkL38?autoplay=1&mute=1', watch: 'https://www.youtube.com/watch?v=a8n4kHxkL38' },
     { id: 'lofi3', name: '🧘 Zen Garden', url: 'https://www.youtube.com/embed/HmMn72U1Rls?autoplay=1&mute=1', watch: 'https://www.youtube.com/watch?v=HmMn72U1Rls' },
     { id: 'lofi4', name: '🌃 Night City', url: 'https://www.youtube.com/embed/EcaATjHUQCA?autoplay=1&mute=1', watch: 'https://www.youtube.com/watch?v=EcaATjHUQCA' },
+    { id: 'lofi5', name: '💕 Baladas Románticas', url: 'https://www.youtube.com/embed/SVL-Tuk7TAo?autoplay=1&mute=1', watch: 'https://www.youtube.com/watch?v=SVL-Tuk7TAo' },
+    { id: 'lofi6', name: '🎻 Violín y Piano', url: 'https://www.youtube.com/embed/NQmHxm87yDA?autoplay=1&mute=1', watch: 'https://www.youtube.com/watch?v=NQmHxm87yDA' },
 ];
 
 let currentLoFiId = 'lofi1';
@@ -1271,15 +1412,13 @@ function getSelectedTaskId() {
 
 // Initialize everything
 function init() {
-    checkUserName();
     loadQuote();
     loadStats();
     setupEventListeners();
-    updateGreeting();
     setInterval(updateGreeting, 60000);
     loadAutoMusicSetting();
     loadSavedWallpaper();
-    initTasks(); // Initialize daily tasks
+    // checkUserName, updateGreeting, initTasks called after auth in afterAuthInit()
 }
 
 document.addEventListener('DOMContentLoaded', init);
