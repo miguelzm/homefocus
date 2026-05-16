@@ -1804,11 +1804,3 @@ body.focus-mode .sidebar-content {
     text-decoration: underline;
 }
 
-body:not(.logged-in) .container,
-body:not(.logged-in) .sidebar,
-body:not(.logged-in) .sidebar-toggle,
-body:not(.logged-in) .sidebar-toggle-left,
-body:not(.logged-in) .sidebar-toggle-right,
-body:not(.logged-in) .right-panel {
-    display: none;
-}
