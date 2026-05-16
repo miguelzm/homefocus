@@ -397,7 +397,7 @@ function showLogin() {
 
 function setLoggedIn() {
     document.getElementById('loginOverlay').classList.add('hidden');
-    document.getElementById('app').style.display = '';
+    document.getElementById('app').style.visibility = 'visible';
     document.body.classList.add('logged-in');
 }
 
