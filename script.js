@@ -50,6 +50,11 @@ try {
                 authReady = true;
                 currentUser = user;
                 if (user) {
+                    // Si es sesión anónima de la versión anterior, cerrarla
+                    if (user.isAnonymous) {
+                        firebase.auth().signOut();
+                        return;
+                    }
                     setLoggedIn();
                     afterAuthInit();
                 } else {
