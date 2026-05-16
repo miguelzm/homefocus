@@ -70,7 +70,6 @@ try {
             authReady = true;
             showLogin();
         }
-        TASKS_DOC = firestoreDb.collection('homefocus').doc('tasks');
     } else {
         authReady = true;
         showLogin();
@@ -445,6 +444,7 @@ async function handleLogout() {
 }
 
 function afterAuthInit() {
+    TASKS_DOC = firestoreDb ? firestoreDb.collection('homefocus').doc(currentUser.uid) : null;
     checkUserName();
     updateGreeting();
     initTasks();
@@ -1138,8 +1138,22 @@ try {
 }
 
 // Tasks functionality
+function getTasksKey() {
+    return currentUser ? `homefocus_tasks_${currentUser.uid}` : 'homefocus_tasks_backup';
+}
+
 function initTasks() {
-    const saved = localStorage.getItem('homefocus_tasks_backup');
+    let key = getTasksKey();
+    let saved = localStorage.getItem(key);
+    // Migrate from old shared backup if first time with per-user key
+    if (!saved && currentUser) {
+        const old = localStorage.getItem('homefocus_tasks_backup');
+        if (old) {
+            localStorage.setItem(key, old);
+            localStorage.removeItem('homefocus_tasks_backup');
+            saved = old;
+        }
+    }
     if (saved) {
         try { globalTasks = JSON.parse(saved); } catch(e) { globalTasks = []; }
     }
@@ -1164,7 +1178,7 @@ function initTasks() {
 }
 
 function saveGlobalTasks() {
-    localStorage.setItem('homefocus_tasks_backup', JSON.stringify(globalTasks));
+    localStorage.setItem(getTasksKey(), JSON.stringify(globalTasks));
     if (TASKS_DOC) {
         try {
             TASKS_DOC.set({ tasks: globalTasks, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
