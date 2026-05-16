@@ -38,7 +38,6 @@ let firestoreDb = null;
 let TASKS_DOC = null;
 let authReady = true;
 let currentUser = null;
-let isLoginMode = true;
 
 try {
     if (typeof firebase !== 'undefined') {
@@ -227,10 +226,6 @@ function setupEventListeners() {
 
     // Login form
     document.getElementById('loginSubmitBtn').addEventListener('click', handleLoginSubmit);
-    document.getElementById('loginSwitchLink').addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleLoginMode();
-    });
     document.getElementById('loginPasswordInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleLoginSubmit();
     });
@@ -401,26 +396,6 @@ function setLoggedIn() {
     document.body.classList.add('logged-in');
 }
 
-function toggleLoginMode() {
-    isLoginMode = !isLoginMode;
-    const nameField = document.getElementById('nameFieldContainer');
-    const btn = document.getElementById('loginSubmitBtn');
-    const subtitle = document.getElementById('loginSubtitle');
-    const link = document.getElementById('loginSwitchLink');
-    if (isLoginMode) {
-        nameField.classList.add('hidden');
-        btn.textContent = 'Iniciar Sesión';
-        subtitle.textContent = 'Inicia sesión para continuar';
-        link.textContent = 'Crear cuenta nueva';
-    } else {
-        nameField.classList.remove('hidden');
-        btn.textContent = 'Crear Cuenta';
-        subtitle.textContent = 'Crea tu cuenta para empezar';
-        link.textContent = 'Ya tengo cuenta';
-    }
-    hideLoginError();
-}
-
 function showLoginError(msg) {
     const el = document.getElementById('loginError');
     el.textContent = msg;
@@ -453,18 +428,7 @@ async function handleLoginSubmit() {
         return;
     }
     try {
-        if (isLoginMode) {
-            await firebase.auth().signInWithEmailAndPassword(email, password);
-        } else {
-            const name = document.getElementById('loginNameInput').value.trim();
-            if (!name) {
-                showLoginError('Ingresa tu nombre');
-                return;
-            }
-            const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
-            await cred.user.updateProfile({ displayName: name });
-            localStorage.setItem(STORAGE_KEYS.USER_NAME, name);
-        }
+        await firebase.auth().signInWithEmailAndPassword(email, password);
     } catch (err) {
         showLoginError(getFirebaseErrorMessage(err.code));
     }
