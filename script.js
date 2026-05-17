@@ -1168,7 +1168,8 @@ function initTasks() {
             if (snapshot.exists) {
                 globalTasks = snapshot.data().tasks || [];
                 checkNewDay();
-                saveGlobalTasks();
+                // Solo actualizar localStorage, NO re-guardar en Firestore (evita bucle)
+                localStorage.setItem(getTasksKey(), JSON.stringify(globalTasks));
                 renderTaskTable();
                 renderGlobalTaskTable();
                 populateTaskSelector();
