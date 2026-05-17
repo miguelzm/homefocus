@@ -108,6 +108,7 @@
                                     <th class="col-deadline">📅 Límite</th>
                                     <th class="col-avances">🍅</th>
                                     <th class="col-action-global">📋</th>
+                                    <th class="col-actions">⚙️</th>
                                     <th class="col-completion">✅ Hecho</th>
                                 </tr>
                             </thead>
@@ -201,11 +202,25 @@
         <div id="nameModal" class="modal hidden">
             <div class="modal-content">
                 <h2>Bienvenido a HomeFocus</h2>
-                <p>Ingresa tu nombre para personalizar tu experiencia</p>
-                <input type="text" id="nameInput" placeholder="Tu nombre" maxlength="20">
-                <button id="saveNameBtn" class="btn-primary">Guardar</button>
-            </div>
-        </div>
+        <p>Ingresa tu nombre para personalizar tu experiencia</p>
+        <input type="text" id="nameInput" placeholder="Tu nombre" maxlength="20">
+        <button id="saveNameBtn" class="btn-primary">Guardar</button>
+    </div>
+</div>
+
+<div id="editTaskModal" class="modal hidden">
+    <div class="modal-content">
+        <h2>Editar Tarea</h2>
+        <input type="text" id="editTaskName" placeholder="Nombre de la tarea" maxlength="50">
+        <select id="editTaskPriority">
+            <option value="Alta">🔴 Alta</option>
+            <option value="Media">🟡 Media</option>
+            <option value="Baja">🟢 Baja</option>
+        </select>
+        <input type="date" id="editTaskDeadline">
+        <button id="saveEditTaskBtn" class="btn-primary">Guardar Cambios</button>
+    </div>
+</div>
 
         <main class="main-content">
             <section class="quote-section">

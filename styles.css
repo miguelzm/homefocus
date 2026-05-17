@@ -1072,6 +1072,83 @@ body.focus-mode .pomodoro-section {
     background: rgba(16, 185, 129, 0.1);
 }
 
+/* Action buttons in global tasks table */
+.task-action-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem 0.35rem;
+    font-size: 1rem;
+    border-radius: 4px;
+    transition: var(--transition);
+}
+.task-action-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+.task-action-btn.delete-btn:hover {
+    background: rgba(239, 68, 68, 0.15);
+}
+.col-actions {
+    width: 12%;
+    text-align: center;
+}
+
+/* Edit modal select styling */
+#editTaskPriority {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    transition: var(--transition);
+}
+#editTaskPriority:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+#editTaskPriority option {
+    background: #1a1a2e;
+    color: var(--text-primary);
+}
+
+#editTaskDeadline {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    transition: var(--transition);
+}
+#editTaskDeadline:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+#editTaskName {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    transition: var(--transition);
+}
+#editTaskName:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+#editTaskName::placeholder {
+    color: var(--text-muted);
+}
+
 /* Task selector in pomodoro */
 .task-selector-row {
     display: flex;

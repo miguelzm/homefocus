@@ -238,6 +238,19 @@ function setupEventListeners() {
     elements.toggleGlobalTasks.addEventListener('click', toggleGlobalTasks);
     // Wallpaper button event listener is set up below (line ~270)
     
+    // Edit task modal
+    document.getElementById('saveEditTaskBtn').addEventListener('click', saveEditTask);
+    document.getElementById('editTaskName').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') saveEditTask();
+    });
+    // Close modal on overlay click
+    document.getElementById('editTaskModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) {
+            document.getElementById('editTaskModal').classList.add('hidden');
+            editingTaskId = null;
+        }
+    });
+
     // Global tasks specific listeners
     elements.addGlobalTaskBtn.addEventListener('click', addGlobalTask);
     elements.globalTaskNameInput.addEventListener('keypress', (e) => {
@@ -1234,6 +1247,8 @@ function addGlobalTask() {
     showNotification('Tarea global añadida: ' + name);
 }
 
+let editingTaskId = null;
+
 function deleteGlobalTask(taskId) {
     globalTasks = globalTasks.filter(t => t.id !== taskId);
     saveGlobalTasks();
@@ -1241,6 +1256,33 @@ function deleteGlobalTask(taskId) {
     renderTaskTable();
     populateTaskSelector();
     showNotification('Tarea eliminada');
+}
+
+function editGlobalTask(taskId) {
+    const task = globalTasks.find(t => t.id === taskId);
+    if (!task) return;
+    editingTaskId = taskId;
+    document.getElementById('editTaskName').value = task.name;
+    document.getElementById('editTaskPriority').value = task.priority;
+    document.getElementById('editTaskDeadline').value = task.deadline || '';
+    document.getElementById('editTaskModal').classList.remove('hidden');
+}
+
+function saveEditTask() {
+    const name = document.getElementById('editTaskName').value.trim();
+    if (!name) { showNotification('Escribe un nombre para la tarea'); return; }
+    const task = globalTasks.find(t => t.id === editingTaskId);
+    if (!task) return;
+    task.name = name;
+    task.priority = document.getElementById('editTaskPriority').value;
+    task.deadline = document.getElementById('editTaskDeadline').value || null;
+    saveGlobalTasks();
+    renderGlobalTaskTable();
+    renderTaskTable();
+    populateTaskSelector();
+    document.getElementById('editTaskModal').classList.add('hidden');
+    editingTaskId = null;
+    showNotification('Tarea actualizada');
 }
 
 function sendToDaily(taskId) {
@@ -1336,7 +1378,7 @@ function renderGlobalTaskTable() {
 
     if (globalTasks.length === 0) {
         const row = document.createElement('tr');
-        row.innerHTML = '<td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted)">No hay tareas globales. Añade una tarea arriba.</td>';
+        row.innerHTML = '<td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted)">No hay tareas globales. Añade una tarea arriba.</td>';
         elements.globalTaskTableBody.appendChild(row);
         return;
     }
@@ -1364,6 +1406,10 @@ function renderGlobalTaskTable() {
                     ${task.isDaily ? '✓' : '📅'}
                 </button>
             </td>
+            <td style="text-align:center;white-space:nowrap">
+                <button class="task-action-btn edit-btn" data-task-id="${task.id}" title="Editar">✏️</button>
+                <button class="task-action-btn delete-btn" data-task-id="${task.id}" title="Eliminar">🗑️</button>
+            </td>
             <td style="text-align:center;font-size:0.9rem">
                 ${task.completed
                     ? `<span title="Completado: ${task.completionDate}" style="color:var(--success-color);font-weight:600">✓ ${new Date(task.completionDate + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}</span>`
@@ -1372,6 +1418,10 @@ function renderGlobalTaskTable() {
         `;
         const sendBtn = row.querySelector('.send-today-btn');
         sendBtn.addEventListener('click', () => sendToDaily(task.id));
+        const editBtn = row.querySelector('.edit-btn');
+        editBtn.addEventListener('click', () => editGlobalTask(task.id));
+        const deleteBtn = row.querySelector('.delete-btn');
+        deleteBtn.addEventListener('click', () => deleteGlobalTask(task.id));
         elements.globalTaskTableBody.appendChild(row);
     });
 }
