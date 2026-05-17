@@ -1151,6 +1151,8 @@ try {
 }
 
 // Tasks functionality
+let localVersion = parseInt(localStorage.getItem('homefocus_version')) || 0;
+
 function getTasksKey() {
     return currentUser ? `homefocus_tasks_${currentUser.uid}` : 'homefocus_tasks_backup';
 }
@@ -1178,24 +1180,32 @@ function initTasks() {
     // Sync with Firestore if available
     if (TASKS_DOC) {
         TASKS_DOC.onSnapshot((snapshot) => {
-            // Ignorar cambios locales no confirmados (evita sobreescribir mientras se guarda)
             if (snapshot.exists && !snapshot.metadata.hasPendingWrites) {
-                globalTasks = snapshot.data().tasks || [];
-                checkNewDay();
-                localStorage.setItem(getTasksKey(), JSON.stringify(globalTasks));
-                renderTaskTable();
-                renderGlobalTaskTable();
-                populateTaskSelector();
+                const sv = snapshot.data().version || 0;
+                // Solo aplicar si la versión del servidor es mayor que la local
+                // (cambio remoto desde otro dispositivo)
+                if (sv > localVersion) {
+                    globalTasks = snapshot.data().tasks || [];
+                    localVersion = sv;
+                    localStorage.setItem(getTasksKey(), JSON.stringify(globalTasks));
+                    localStorage.setItem('homefocus_version', localVersion);
+                    checkNewDay();
+                    renderTaskTable();
+                    renderGlobalTaskTable();
+                    populateTaskSelector();
+                }
             }
         }, () => {});
     }
 }
 
 function saveGlobalTasks() {
+    localVersion++;
     localStorage.setItem(getTasksKey(), JSON.stringify(globalTasks));
+    localStorage.setItem('homefocus_version', localVersion);
     if (TASKS_DOC) {
         try {
-            TASKS_DOC.set({ tasks: globalTasks, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
+            TASKS_DOC.set({ tasks: globalTasks, version: localVersion, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
                 .catch(() => {});
         } catch(e) {}
     }
