@@ -1178,10 +1178,10 @@ function initTasks() {
     // Sync with Firestore if available
     if (TASKS_DOC) {
         TASKS_DOC.onSnapshot((snapshot) => {
-            if (snapshot.exists) {
+            // Ignorar cambios locales no confirmados (evita sobreescribir mientras se guarda)
+            if (snapshot.exists && !snapshot.metadata.hasPendingWrites) {
                 globalTasks = snapshot.data().tasks || [];
                 checkNewDay();
-                // Solo actualizar localStorage, NO re-guardar en Firestore (evita bucle)
                 localStorage.setItem(getTasksKey(), JSON.stringify(globalTasks));
                 renderTaskTable();
                 renderGlobalTaskTable();
