@@ -1248,14 +1248,42 @@ function addGlobalTask() {
 }
 
 let editingTaskId = null;
+let pendingDeleteId = null;
+
+function confirmAction(message) {
+    return new Promise((resolve) => {
+        document.getElementById('confirmMessage').textContent = message;
+        document.getElementById('confirmModal').classList.remove('hidden');
+        document.getElementById('confirmOkBtn').onclick = () => {
+            document.getElementById('confirmModal').classList.add('hidden');
+            resolve(true);
+        };
+        document.getElementById('confirmCancelBtn').onclick = () => {
+            document.getElementById('confirmModal').classList.add('hidden');
+            resolve(false);
+        };
+        document.getElementById('confirmModal').onclick = (e) => {
+            if (e.target === e.currentTarget) {
+                document.getElementById('confirmModal').classList.add('hidden');
+                resolve(false);
+            }
+        };
+    });
+}
 
 function deleteGlobalTask(taskId) {
-    globalTasks = globalTasks.filter(t => t.id !== taskId);
-    saveGlobalTasks();
-    renderGlobalTaskTable();
-    renderTaskTable();
-    populateTaskSelector();
-    showNotification('Tarea eliminada');
+    pendingDeleteId = taskId;
+    confirmAction('¿Estás seguro de que quieres eliminar esta tarea?').then((confirmed) => {
+        if (confirmed) {
+            globalTasks = globalTasks.filter(t => t.id !== taskId);
+            saveGlobalTasks();
+            renderGlobalTaskTable();
+            renderTaskTable();
+            populateTaskSelector();
+            showNotification('Tarea eliminada');
+        }
+        pendingDeleteId = null;
+    });
 }
 
 function editGlobalTask(taskId) {
