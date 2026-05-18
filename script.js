@@ -391,6 +391,10 @@ function saveUserName() {
         localStorage.setItem(STORAGE_KEYS.USER_NAME, name);
         if (currentUser) {
             currentUser.updateProfile({ displayName: name }).catch(() => {});
+            // Persistir nombre en Firestore
+            if (TASKS_DOC) {
+                TASKS_DOC.set({ userName: name }, { merge: true }).catch(() => {});
+            }
         }
         elements.nameModal.classList.add('hidden');
         updateGreeting();
@@ -458,8 +462,22 @@ async function handleLogout() {
 
 function afterAuthInit() {
     TASKS_DOC = firestoreDb ? firestoreDb.collection('homefocus').doc(currentUser.uid) : null;
-    checkUserName();
-    updateGreeting();
+    // Cargar nombre desde Firestore si no está en localStorage
+    if (!localStorage.getItem(STORAGE_KEYS.USER_NAME) && TASKS_DOC) {
+        TASKS_DOC.get().then((doc) => {
+            if (doc.exists && doc.data().userName) {
+                localStorage.setItem(STORAGE_KEYS.USER_NAME, doc.data().userName);
+            }
+            checkUserName();
+            updateGreeting();
+        }).catch(() => {
+            checkUserName();
+            updateGreeting();
+        });
+    } else {
+        checkUserName();
+        updateGreeting();
+    }
     initTasks();
 }
 

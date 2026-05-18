@@ -1763,14 +1763,6 @@ body.focus-mode .pomodoro-section {
     border-color: var(--primary-color);
 }
 
-body.focus-mode .sidebar-toggle,
-body.focus-mode .sidebar-toggle-left,
-body.focus-mode .sidebar-toggle-right,
-body.focus-mode .sidebar-content {
-    opacity: 0.3;
-    pointer-events: none;
-}
-
 .container.with-sidebar {
     margin-left: 0;
     transition: margin-left 0.3s ease;
