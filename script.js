@@ -1015,6 +1015,11 @@ function saveSession(minutes) {
 
     localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(stats));
     localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions));
+
+    // Persistir estadísticas en Firestore
+    if (TASKS_DOC) {
+        TASKS_DOC.set({ stats, sessions }, { merge: true }).catch(() => {});
+    }
 }
 
 function loadStats() {
@@ -1212,6 +1217,30 @@ function initTasks() {
                     renderGlobalTaskTable();
                     populateTaskSelector();
                 }
+                // Sincronizar estadísticas desde Firestore
+                const sData = snapshot.data();
+                if (sData.stats) {
+                    const localStats = JSON.parse(localStorage.getItem(STORAGE_KEYS.STATS) || '{}');
+                    const merged = { ...sData.stats };
+                    // Combinar con estadísticas locales (max por día)
+                    for (const day in localStats) {
+                        merged[day] = Math.max(merged[day] || 0, localStats[day]);
+                    }
+                    localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(merged));
+                }
+                if (sData.sessions) {
+                    const localSessions = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSIONS) || '{}');
+                    const mergedS = { ...sData.sessions };
+                    for (const day in localSessions) {
+                        mergedS[day] = Math.max(mergedS[day] || 0, localSessions[day]);
+                    }
+                    localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(mergedS));
+                }
+                if (sData.userName && !localStorage.getItem(STORAGE_KEYS.USER_NAME)) {
+                    localStorage.setItem(STORAGE_KEYS.USER_NAME, sData.userName);
+                    updateGreeting();
+                }
+                loadStats();
             }
         }, () => {});
     }
@@ -1223,8 +1252,19 @@ function saveGlobalTasks() {
     localStorage.setItem('homefocus_version', localVersion);
     if (TASKS_DOC) {
         try {
-            TASKS_DOC.set({ tasks: globalTasks, version: localVersion, updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
-                .catch(() => {});
+            const data = {
+                tasks: globalTasks,
+                version: localVersion,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            // Conservar estadísticas y nombre al guardar tareas
+            const stats = JSON.parse(localStorage.getItem(STORAGE_KEYS.STATS) || '{}');
+            const sessions = JSON.parse(localStorage.getItem(STORAGE_KEYS.SESSIONS) || '{}');
+            if (Object.keys(stats).length > 0) data.stats = stats;
+            if (Object.keys(sessions).length > 0) data.sessions = sessions;
+            const name = localStorage.getItem(STORAGE_KEYS.USER_NAME);
+            if (name) data.userName = name;
+            TASKS_DOC.set(data).catch(() => {});
         } catch(e) {}
     }
 }
